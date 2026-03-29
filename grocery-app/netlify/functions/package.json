@@ -19,8 +19,3 @@
     "development": ["last 1 chrome version", "last 1 firefox version", "last 1 safari version"]
   }
 }
-```
-
-Ga naar:
-```
-https://github.com/ramonschram-crypto/Grocery/edit/main/grocery-app/package.json
