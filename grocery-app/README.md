@@ -1,59 +1,41 @@
 # Boodschappen App
 
-Een mobiele React-app die een AI-gegenereerd weekplan maakt met Albert Heijn bonusdeals.
+Een mobile-first React weekplanner met Albert Heijn bonusdeals en Claude AI.
 
-## Deploy op Netlify
+## Setup
 
-### 1. Repo aanmaken
-Push deze map naar een GitHub/GitLab repo.
-
-### 2. Netlify koppelen
-- Ga naar [app.netlify.com](https://app.netlify.com) → New site from Git
-- Selecteer je repo
-- **Laat "Base directory" leeg** — `netlify.toml` regelt alles
-- Klik Deploy
-
-### 3. Environment variable instellen
-In Netlify → Site settings → Environment variables:
-```
-ANTHROPIC_API_KEY = sk-ant-...
-```
-
-### 4. Klaar
-De app staat live. Geen verdere configuratie nodig.
-
----
-
-## Lokaal draaien
+### 1. Installeer dependencies
 
 ```bash
 npm install
-npm install -g netlify-cli
-netlify dev
+cd netlify/functions && npm install && cd ../..
 ```
 
-Zet `ANTHROPIC_API_KEY` in een `.env` bestand in de root:
+### 2. Stel environment variables in
+
+In Netlify UI → Site settings → Environment variables:
+
 ```
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
----
+### 3. Lokaal testen
 
-## Structuur
-
-```
-src/
-  screens/        PlanScreen, MealsScreen, ListScreen
-  components/     BottomNav, MealCard, ListItem, PreferencesModal
-  context/        AppContext (globale state + API calls)
-netlify/
-  functions/
-    generate-plan.js   Claude API — weekplan genereren
-    ah-bonus.js        AH bonus deals ophalen (1u cache)
+```bash
+npm install -g netlify-cli
+netlify dev
 ```
 
-## Dataopslag
-- Gebruikersprofiel: `localStorage` (grocery_profile)
-- Weekplan: `localStorage` (grocery_plan)
-- Afgevinkte items: `localStorage` (grocery_list_checked)
-- Nooit persoonlijke data naar server — alleen anoniem naar Claude API als planningcontext
+### 4. Deployen naar Netlify
+
+Verbind je GitHub repo met Netlify. De `netlify.toml` regelt alles.
+Laat de **base directory leeg** in Netlify UI.
+
+## Features
+
+- Dagenselectie (Ma-Zo) + maaltijdtypes
+- Dieetbeperkingen, vaste maaltijden (CRUD), koopgeschiedenis
+- AH bonus deals automatisch ophalen (1u cache)
+- Weekoverzicht per dag, maaltijd vervangen met één tik
+- Gecategoriseerde boodschappenlijst met afvinken + progress bar
+- Alles persistent via localStorage
