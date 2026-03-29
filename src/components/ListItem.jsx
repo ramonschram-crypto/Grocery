@@ -1,13 +1,14 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 
-export default function ListItem({ itemKey, name, amount, bonus_deal }) {
+export default function ListItem({ itemKey, name, amount, bonus_deal, index = 0 }) {
   const { checkedItems, toggleCheck } = useApp();
   const checked = !!checkedItems[itemKey];
 
   return (
     <div
       className={`list-item${checked ? ' checked' : ''}`}
+      style={{ animationDelay: `${index * 0.04}s` }}
       onClick={() => toggleCheck(itemKey)}
     >
       <div className="list-item-check">

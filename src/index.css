@@ -602,3 +602,183 @@ select.input {
   background-position: right 12px center;
   padding-right: 32px;
 }
+
+/* ── Animations ── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(45,106,79,0.3); }
+  50%       { box-shadow: 0 0 0 8px rgba(45,106,79,0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+@keyframes checkPop {
+  0%   { transform: scale(0.5); opacity: 0; }
+  60%  { transform: scale(1.2); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+@keyframes confettiFall {
+  0%   { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(60px)  rotate(720deg); opacity: 0; }
+}
+
+.meal-card {
+  animation: fadeInUp 0.3s ease-out both;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.meal-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.meal-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.list-item {
+  animation: fadeInUp 0.3s ease-out both;
+}
+
+.btn-primary:not(:disabled) {
+  animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+/* Bonus shimmer on list items */
+.list-item .bonus-badge {
+  background: linear-gradient(90deg, #fff3cd 0%, #ffe066 50%, #fff3cd 100%);
+  background-size: 200% auto;
+  animation: shimmer 2.5s linear infinite;
+  border-color: var(--bonus-border);
+}
+
+/* Completion celebration */
+.list-complete-banner {
+  text-align: center;
+  padding: 24px 20px;
+  animation: fadeInUp 0.4s ease-out;
+}
+
+.list-complete-emoji {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 8px;
+  animation: checkPop 0.5s ease-out;
+}
+
+/* Macro bar */
+.macro-bar-wrap {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.macro-bar-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.macro-bar-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  width: 68px;
+  flex-shrink: 0;
+}
+
+.macro-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.macro-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.macro-bar-value {
+  font-size: 11px;
+  color: var(--text-secondary);
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Daily kcal bar */
+.daily-kcal-bar {
+  margin: 0 20px 12px;
+  padding: 10px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Screen header gradient */
+.screen-header::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 120px;
+  background: linear-gradient(180deg, rgba(248,242,230,0.6) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.screen-header {
+  position: relative;
+}
+
+/* ── Responsive ── */
+.app-shell {
+  max-width: 480px !important;
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 8px 40px rgba(0,0,0,0.12);
+    border-radius: 28px;
+    overflow: hidden;
+    margin: 24px auto;
+    height: calc(100vh - 48px);
+  }
+
+  #root {
+    background: #e8e3d8;
+    min-height: 100vh;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 359px) {
+  .stats-bar { flex-wrap: wrap; }
+  .stat-item { flex: 1 1 45%; }
+}
+
+@media (max-width: 390px) {
+  .sheet { max-height: 90vh; }
+}
+
+/* Tap targets min 44px */
+.chip        { min-height: 44px; display: inline-flex; align-items: center; }
+.day-tab     { min-height: 44px; display: inline-flex; align-items: center; }
+.nav-item    { min-height: 44px; }
+.list-item   { min-height: 44px; }
