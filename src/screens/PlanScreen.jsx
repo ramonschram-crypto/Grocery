@@ -17,6 +17,7 @@ export default function PlanScreen() {
     selectedMealTypes, setSelectedMealTypes,
     generatePlan, loading, error,
     profile,
+    freeText, setFreeText,
   } = useApp();
 
   const [showPrefs, setShowPrefs] = useState(false);
@@ -37,6 +38,7 @@ export default function PlanScreen() {
 
   const restrictionCount = (profile.restrictions || []).length;
   const fixedMealCount = (profile.fixedMeals || []).length;
+  const hasBevel = profile.bevelData && Object.values(profile.bevelData).some(v => v && v.trim());
 
   return (
     <>
@@ -105,17 +107,42 @@ export default function PlanScreen() {
           >
             <div>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
-                Dieet, vaste maaltijden & geschiedenis
+                Dieet, Bevel, vaste maaltijden & geschiedenis
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
                 {restrictionCount > 0 ? `${restrictionCount} beperking${restrictionCount !== 1 ? 'en' : ''}` : 'Geen beperkingen'}
-                {fixedMealCount > 0 ? ` · ${fixedMealCount} vaste maaltijd${fixedMealCount !== 1 ? 'en' : ''}` : ''}
+                {fixedMealCount > 0 ? ` \u00B7 ${fixedMealCount} vaste maaltijd${fixedMealCount !== 1 ? 'en' : ''}` : ''}
+                {hasBevel ? ' \u00B7 Bevel data' : ''}
               </div>
             </div>
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinecap="round">
               <path d="M6 3l5 5-5 5"/>
             </svg>
           </button>
+        </div>
+
+        {/* Free text instruction */}
+        <div className="section" style={{ marginTop: 20 }}>
+          <p className="section-label">Extra instructies</p>
+          <textarea
+            className="input"
+            placeholder={'bv. "meer eiwitten", "budget \u20AC50", "geen vis deze week", "snel klaar <20 min"'}
+            value={freeText}
+            onChange={e => setFreeText(e.target.value)}
+            rows={3}
+            style={{
+              resize: 'vertical',
+              minHeight: 60,
+              fontFamily: 'var(--font-sans)',
+              fontSize: 13,
+              lineHeight: 1.4,
+            }}
+          />
+          {freeText.trim() && (
+            <p style={{ fontSize: 11, color: 'var(--green)', marginTop: 4, fontWeight: 500 }}>
+              ✓ Wordt meegestuurd bij genereren
+            </p>
+          )}
         </div>
 
         {/* AH bonus note */}

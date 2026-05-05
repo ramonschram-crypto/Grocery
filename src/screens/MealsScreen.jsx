@@ -5,6 +5,66 @@ import MealCard from '../components/MealCard';
 const DAYS_ORDER = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
 const MEAL_TYPE_ORDER = ['breakfast', 'lunch', 'dinner', 'household'];
 
+function DailyMacroSummary({ meals }) {
+  let totalProteinKcal = 0, totalCarbKcal = 0, totalFatKcal = 0, totalKcal = 0;
+
+  Object.values(meals).forEach(meal => {
+    if (!meal) return;
+    totalKcal += meal.kcal || 0;
+    if (meal.macros) {
+      totalProteinKcal += meal.macros.protein_kcal || 0;
+      totalCarbKcal += meal.macros.carb_kcal || 0;
+      totalFatKcal += meal.macros.fat_kcal || 0;
+    }
+  });
+
+  if (totalKcal === 0) return null;
+
+  const proteinG = Math.round(totalProteinKcal / 4);
+  const carbG = Math.round(totalCarbKcal / 4);
+  const fatG = Math.round(totalFatKcal / 9);
+  const hasMacros = proteinG > 0 || carbG > 0 || fatG > 0;
+
+  return (
+    <div className="daily-kcal-bar" style={{ flexDirection: 'column', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+        <span style={{ fontSize: 13 }}>📊</span>
+        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+          Totaal: <strong>~{totalKcal.toLocaleString('nl-NL')} kcal</strong> vandaag
+        </span>
+      </div>
+      {hasMacros && (
+        <div style={{ display: 'flex', gap: 6, width: '100%' }}>
+          <div style={{
+            flex: 1, display: 'flex', alignItems: 'center', gap: 5,
+            background: 'rgba(74, 144, 217, 0.1)', borderRadius: 8, padding: '5px 8px',
+          }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4a90d9', flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#4a90d9' }}>{proteinG}g</span>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>eiwit</span>
+          </div>
+          <div style={{
+            flex: 1, display: 'flex', alignItems: 'center', gap: 5,
+            background: 'rgba(232, 160, 32, 0.1)', borderRadius: 8, padding: '5px 8px',
+          }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#e8a020', flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#c88a10' }}>{carbG}g</span>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>koolh.</span>
+          </div>
+          <div style={{
+            flex: 1, display: 'flex', alignItems: 'center', gap: 5,
+            background: 'rgba(208, 90, 90, 0.1)', borderRadius: 8, padding: '5px 8px',
+          }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#d05a5a', flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#d05a5a' }}>{fatG}g</span>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>vet</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MealsScreen() {
   const { plan, selectedDays, setActiveScreen } = useApp();
 
@@ -30,9 +90,6 @@ export default function MealsScreen() {
 
   const currentDayMeals = plan.plan?.[activeDay] || {};
 
-  // Daily kcal total
-  const dailyKcal = Object.values(currentDayMeals).reduce((sum, meal) => sum + (meal?.kcal || 0), 0);
-
   return (
     <div className="screen">
       <div className="screen-header" style={{ paddingTop: 24 }}>
@@ -54,12 +111,7 @@ export default function MealsScreen() {
         ))}
       </div>
 
-      {dailyKcal > 0 && (
-        <div className="daily-kcal-bar">
-          <span>📊</span>
-          <span>Totaal: <strong>~{dailyKcal.toLocaleString('nl-NL')} kcal</strong> vandaag</span>
-        </div>
-      )}
+      <DailyMacroSummary meals={currentDayMeals} />
 
       <div style={{ padding: '0 20px 20px' }}>
         {MEAL_TYPE_ORDER.map((type, idx) => {

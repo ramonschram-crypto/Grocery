@@ -10,14 +10,14 @@ exports.handler = async function (event, context) {
   try { body = JSON.parse(event.body); }
   catch { return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON' }) }; }
 
-  const { days, mealTypes, userProfile, bonusDeals = [], replaceSingle = false } = body;
+  const { days, mealTypes, userProfile, bonusDeals = [], freeText = null, replaceSingle = false } = body;
   if (!days?.length || !mealTypes?.length) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing days or mealTypes' }) };
 
   const mealTypeLabels = { breakfast: 'ontbijt', lunch: 'lunch', dinner: 'diner', household: 'huishoudproducten' };
 
   const dealsText = bonusDeals.length > 0
     ? `Actieve Albert Heijn bonusdeals:\n${bonusDeals.slice(0, 30).map(d =>
-        `- ${d.name} (${d.brand}): €${d.price}${d.was ? ` (was €${d.was})` : ''}${d.discount ? ` — ${d.discount}` : ''}`
+        `- ${d.name} (${d.brand}): \u20AC${d.price}${d.was ? ` (was \u20AC${d.was})` : ''}${d.discount ? ` \u2014 ${d.discount}` : ''}`
       ).join('\n')}`
     : 'Geen bonusdeals beschikbaar.';
 
@@ -30,7 +30,22 @@ exports.handler = async function (event, context) {
     : '';
 
   const fixedMealsText = userProfile.fixedMeals?.length > 0
-    ? `Vaste maaltijden (verplicht inplannen als type overeenkomt):\n${userProfile.fixedMeals.map(m => `- ${m.type}: ${m.name} (ingrediënten: ${m.ingredients?.join(', ') || 'n.v.t.'})`).join('\n')}`
+    ? `Vaste maaltijden (verplicht inplannen als type overeenkomt):\n${userProfile.fixedMeals.map(m => `- ${m.type}: ${m.name} (ingredi\u00EBnten: ${m.ingredients?.join(', ') || 'n.v.t.'})`).join('\n')}`
+    : '';
+
+  // Bevel health data
+  const bevel = userProfile.bevelData || {};
+  const bevelEntries = Object.entries(bevel).filter(([, v]) => v && v.toString().trim());
+  const bevelText = bevelEntries.length > 0
+    ? `Bevel gezondheidsdata (pas voeding aan op herstel/trainingsbelasting):\n${bevelEntries.map(([k, v]) => {
+        const labels = { hrv: 'HRV', rhr: 'Rust hartslag', sleepScore: 'Slaapscore', cardioLoad: 'Cardio Load', muscleFocus: 'Spierfocus' };
+        return `- ${labels[k] || k}: ${v}`;
+      }).join('\n')}\n\nBij lage HRV/slaapscore of hoge cardio load: meer herstelbevorderende voeding (extra eiwitten, anti-inflammatoir, magnesium-rijk). Bij hoge spierfocus op specifieke spiergroepen: meer eiwit rondom trainingsdagen.`
+    : '';
+
+  // Free text from user
+  const freeTextBlock = freeText
+    ? `Extra instructies van de gebruiker (behandel als hoge prioriteit):\n"${freeText}"`
     : '';
 
   const systemPrompt = `Je bent een Nederlandse maaltijdplanner die realistische, betaalbare weekplannen genereert voor Nederlandse huishoudens.
@@ -53,11 +68,13 @@ Regels:
    - "Conimex Woksaus Teriyaki 175ml" niet "teriyaki saus"
    - "AH Verse spinazie 250g" niet "spinazie"
    - "AH Roomboter ongezouten 250g" niet "boter"
-   - "Calvé Pindakaas 650g" niet "pindakaas"
+   - "Calv\u00E9 Pindakaas 650g" niet "pindakaas"
    Vermeld altijd het gewicht/volume. Gebruik "AH" als huismerk tenzij een ander merk logischer is.
    Als er een bonusdeal actief is voor een product, gebruik dan exact die productnaam.
 8. Geef realistische kcal-waarden per portie (1 persoon) voor elke maaltijd.
-   Geef ook een macro-verdeling als "macros" met kcal uit eiwitten, koolhydraten en vetten.`;
+   Geef ook een macro-verdeling als "macros" met kcal uit eiwitten, koolhydraten en vetten.
+9. Als Bevel-gezondheidsdata beschikbaar is, pas de voeding aan op basis van herstel en trainingsbelasting.
+10. Extra instructies van de gebruiker hebben hoge prioriteit — volg ze op waar mogelijk.`;
 
   const userPrompt = `Genereer een weekplan voor: ${days.join(', ')}
 Maaltijdtypes: ${mealTypes.map(t => mealTypeLabels[t] || t).join(', ')}
@@ -65,6 +82,8 @@ Maaltijdtypes: ${mealTypes.map(t => mealTypeLabels[t] || t).join(', ')}
 ${restrictionsText}
 ${historyText ? '\n' + historyText : ''}
 ${fixedMealsText ? '\n' + fixedMealsText : ''}
+${bevelText ? '\n' + bevelText : ''}
+${freeTextBlock ? '\n' + freeTextBlock : ''}
 
 ${dealsText}
 
@@ -104,7 +123,7 @@ Geef je antwoord in deze exacte JSON-structuur:
 }
 
 In "shoppingList", gebruik ALTIJD echte AH productnamen met gewicht/volume.
-Voorbeeld: "AH Kipfiletblokjes 300g" niet "kipfilet", "Calvé Pindakaas 650g" niet "pindakaas".`;
+Voorbeeld: "AH Kipfiletblokjes 300g" niet "kipfilet", "Calv\u00E9 Pindakaas 650g" niet "pindakaas".`;
 
   try {
     const message = await client.messages.create({

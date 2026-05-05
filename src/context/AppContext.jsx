@@ -5,6 +5,7 @@ const AppContext = createContext();
 const PROFILE_KEY = 'grocery_profile';
 const PLAN_KEY = 'grocery_plan';
 const LIST_CHECKED_KEY = 'grocery_list_checked';
+const FREE_TEXT_KEY = 'grocery_free_text';
 
 const defaultProfile = {
   restrictions: [],
@@ -17,6 +18,13 @@ const defaultProfile = {
     { product: 'eieren', frequency: 'biweekly', brand: 'AH' },
     { product: 'pasta', frequency: 'biweekly', brand: 'AH' },
   ],
+  bevelData: {
+    hrv: '',
+    rhr: '',
+    sleepScore: '',
+    cardioLoad: '',
+    muscleFocus: '',
+  },
 };
 
 export function AppProvider({ children }) {
@@ -26,11 +34,29 @@ export function AppProvider({ children }) {
   const [selectedDays, setSelectedDays] = useState(['Ma', 'Di', 'Wo', 'Do', 'Vr']);
   const [selectedMealTypes, setSelectedMealTypes] = useState(['breakfast', 'lunch', 'dinner']);
 
+  // Free text instruction for plan generation
+  const [freeText, setFreeText] = useState(() => {
+    try {
+      return localStorage.getItem(FREE_TEXT_KEY) || '';
+    } catch {
+      return '';
+    }
+  });
+
   // Profile
   const [profile, setProfile] = useState(() => {
     try {
       const stored = localStorage.getItem(PROFILE_KEY);
-      return stored ? JSON.parse(stored) : defaultProfile;
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Merge in defaults for new fields
+        return {
+          ...defaultProfile,
+          ...parsed,
+          bevelData: { ...defaultProfile.bevelData, ...(parsed.bevelData || {}) },
+        };
+      }
+      return defaultProfile;
     } catch {
       return defaultProfile;
     }
@@ -72,6 +98,10 @@ export function AppProvider({ children }) {
     localStorage.setItem(LIST_CHECKED_KEY, JSON.stringify(checkedItems));
   }, [checkedItems]);
 
+  useEffect(() => {
+    localStorage.setItem(FREE_TEXT_KEY, freeText);
+  }, [freeText]);
+
   const updateProfile = (updates) => {
     setProfile(prev => ({ ...prev, ...updates }));
   };
@@ -109,6 +139,7 @@ export function AppProvider({ children }) {
           mealTypes: selectedMealTypes,
           userProfile: profile,
           bonusDeals: deals,
+          freeText: freeText.trim() || null,
         }),
       });
       if (!res.ok) throw new Error('Plan genereren mislukt');
@@ -133,6 +164,7 @@ export function AppProvider({ children }) {
           mealTypes: [mealType],
           userProfile: profile,
           bonusDeals,
+          freeText: freeText.trim() || null,
           replaceSingle: true,
         }),
       });
@@ -167,6 +199,7 @@ export function AppProvider({ children }) {
       bonusDeals,
       generatePlan,
       replaceMeal,
+      freeText, setFreeText,
     }}>
       {children}
     </AppContext.Provider>
