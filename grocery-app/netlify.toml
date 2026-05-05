@@ -1,0 +1,9 @@
+[build]
+  command = "npm install && cd netlify/functions && npm install && cd ../.. && npm run build"
+  publish = "build"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
