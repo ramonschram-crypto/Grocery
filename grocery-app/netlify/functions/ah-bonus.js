@@ -11,6 +11,7 @@ exports.handler = async function (event, context) {
 
   // Return cache if fresh
   if (cache && Date.now() - cacheTime < CACHE_TTL) {
+    console.log('[ah-bonus] Returning cached deals:', cache.length);
     return { statusCode: 200, headers, body: JSON.stringify({ deals: cache, cached: true }) };
   }
 
@@ -28,34 +29,45 @@ exports.handler = async function (event, context) {
 
     const { access_token } = await tokenRes.json();
 
-    // Step 2: fetch bonus products
-    const bonusRes = await fetch(
-      'https://api.ah.nl/mobile-services/product/search/v2?query=bonus&sortOn=RELEVANCE&page=0&size=50',
-      {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    // Step 2: fetch bonus products — 3 pages
+    // NOTE: do NOT pre-filter on price.discount or shield.text — API shape varies per product.
+    // The "bonus" query already filters server-side. Keep ALL returned products.
+    const allProducts = [];
+    for (let page = 0; page < 3; page++) {
+      const bonusRes = await fetch(
+        `https://api.ah.nl/mobile-services/product/search/v2?query=bonus&sortOn=RELEVANCE&page=${page}&size=50`,
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
-    if (!bonusRes.ok) {
-      throw new Error(`Bonus fetch failed: ${bonusRes.status}`);
+      if (!bonusRes.ok) {
+        console.warn(`[ah-bonus] Page ${page} failed: ${bonusRes.status}`);
+        break;
+      }
+
+      const data = await bonusRes.json();
+      const products = data.products || [];
+      console.log(`[ah-bonus] Page ${page}: ${products.length} products`);
+      allProducts.push(...products);
+
+      // Stop early if last page
+      if (products.length < 50) break;
     }
 
-    const data = await bonusRes.json();
-    const products = data.products || [];
+    console.log('[ah-bonus] Total raw products:', allProducts.length);
 
-    // Map to clean format
-    const deals = products
-      .filter(p => p.price?.discount || p.shield?.text)
-      .slice(0, 50)
+    // Map to clean format — keep ALL products, extract whatever discount info is available
+    const deals = allProducts
       .map(p => {
         const currentPrice = p.price?.now ?? p.price?.unitPrice ?? null;
         const wasPrice = p.price?.was ?? null;
         const discountText = p.price?.discount?.percentage
           ? `${p.price.discount.percentage}% korting`
-          : p.shield?.text || null;
+          : p.shield?.text || (wasPrice ? `was €${wasPrice}` : null);
 
         return {
           name: p.title || p.description || 'Onbekend product',
@@ -67,7 +79,10 @@ exports.handler = async function (event, context) {
           category: p.category?.toLowerCase() || null,
         };
       })
-      .filter(d => d.name && d.price !== null);
+      .filter(d => d.name && d.name !== 'Onbekend product' && d.price !== null)
+      .slice(0, 100);
+
+    console.log('[ah-bonus] Mapped deals:', deals.length);
 
     // Cache it
     cache = deals;
@@ -79,7 +94,7 @@ exports.handler = async function (event, context) {
       body: JSON.stringify({ deals }),
     };
   } catch (err) {
-    console.error('AH bonus error:', err.message);
+    console.error('[ah-bonus] Error:', err.message);
     // Return empty list — plan still works without deals
     return {
       statusCode: 200,
