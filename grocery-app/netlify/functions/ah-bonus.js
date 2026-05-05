@@ -19,33 +19,45 @@ exports.handler = async function (event, context) {
     // Step 1: anonymous token
     const tokenRes = await fetch('https://api.ah.nl/mobile-auth/v1/auth/token/anonymous', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Appie/8.22.3 Android/33',
+        'x-application': 'Appie',
+        'x-clientversion': '8.22.3',
+      },
       body: JSON.stringify({ clientId: 'appie' }),
     });
 
+    console.log('[ah-bonus] Token status:', tokenRes.status);
     if (!tokenRes.ok) {
-      throw new Error(`Token request failed: ${tokenRes.status}`);
+      const errText = await tokenRes.text();
+      throw new Error(`Token request failed: ${tokenRes.status} — ${errText.slice(0, 200)}`);
     }
 
     const { access_token } = await tokenRes.json();
+    console.log('[ah-bonus] Got token:', access_token ? 'yes' : 'no');
+
+    const apiHeaders = {
+      Authorization: `Bearer ${access_token}`,
+      'Content-Type': 'application/json',
+      'User-Agent': 'Appie/8.22.3 Android/33',
+      'x-application': 'Appie',
+      'x-clientversion': '8.22.3',
+    };
 
     // Step 2: fetch bonus products — 3 pages
     // NOTE: do NOT pre-filter on price.discount or shield.text — API shape varies per product.
     // The "bonus" query already filters server-side. Keep ALL returned products.
     const allProducts = [];
     for (let page = 0; page < 3; page++) {
-      const bonusRes = await fetch(
-        `https://api.ah.nl/mobile-services/product/search/v2?query=bonus&sortOn=RELEVANCE&page=${page}&size=50`,
-        {
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const url = `https://api.ah.nl/mobile-services/product/search/v2?query=bonus&sortOn=RELEVANCE&page=${page}&size=50`;
+      const bonusRes = await fetch(url, { headers: apiHeaders });
+
+      console.log(`[ah-bonus] Page ${page} status:`, bonusRes.status);
 
       if (!bonusRes.ok) {
-        console.warn(`[ah-bonus] Page ${page} failed: ${bonusRes.status}`);
+        const errText = await bonusRes.text();
+        console.warn(`[ah-bonus] Page ${page} failed: ${bonusRes.status} — ${errText.slice(0, 200)}`);
         break;
       }
 
@@ -95,7 +107,6 @@ exports.handler = async function (event, context) {
     };
   } catch (err) {
     console.error('[ah-bonus] Error:', err.message);
-    // Return empty list — plan still works without deals
     return {
       statusCode: 200,
       headers,
