@@ -16,84 +16,64 @@ exports.handler = async function (event, context) {
   }
 
   try {
-    // Step 1: anonymous token
-    const tokenRes = await fetch('https://api.ah.nl/mobile-auth/v1/auth/token/anonymous', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Appie/8.22.3 Android/33',
-      },
-      body: JSON.stringify({ clientId: 'appie' }),
-    });
-
-    console.log('[ah-bonus] Token status:', tokenRes.status);
-    if (!tokenRes.ok) {
-      const errText = await tokenRes.text();
-      throw new Error(`Token request failed: ${tokenRes.status} — ${errText.slice(0, 200)}`);
-    }
-
-    const { access_token } = await tokenRes.json();
-    console.log('[ah-bonus] Got token:', access_token ? 'yes' : 'no');
-
-    const apiHeaders = {
-      Authorization: `Bearer ${access_token}`,
-      'Content-Type': 'application/json',
-      'User-Agent': 'Appie/8.22.3 Android/33',
-      'x-application': 'appie',
-    };
-
-    // Step 2: fetch bonus products — 3 pages
-    // NOTE: do NOT pre-filter on price.discount or shield.text — API shape varies per product.
-    // The "bonus" query already filters server-side. Keep ALL returned products.
+    // Use AH website search API — no app registration required
     const allProducts = [];
+
     for (let page = 0; page < 3; page++) {
-      const url = `https://api.ah.nl/mobile-services/product/search/v2?query=bonus&sortOn=RELEVANCE&page=${page}&size=50`;
-      const bonusRes = await fetch(url, { headers: apiHeaders });
+      const url = `https://www.ah.nl/zoeken/api/products/search?query=bonus&page=${page}&size=36&sortBy=RELEVANCE`;
+      const res = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Referer': 'https://www.ah.nl/bonus',
+        },
+      });
 
-      console.log(`[ah-bonus] Page ${page} status:`, bonusRes.status);
+      console.log(`[ah-bonus] Page ${page} status:`, res.status);
 
-      if (!bonusRes.ok) {
-        const errText = await bonusRes.text();
-        console.warn(`[ah-bonus] Page ${page} failed: ${bonusRes.status} — ${errText.slice(0, 200)}`);
+      if (!res.ok) {
+        const errText = await res.text();
+        console.warn(`[ah-bonus] Page ${page} failed: ${res.status} — ${errText.slice(0, 300)}`);
         break;
       }
 
-      const data = await bonusRes.json();
-      const products = data.products || [];
-      console.log(`[ah-bonus] Page ${page}: ${products.length} products`);
+      const data = await res.json();
+      const cards = data.cards || [];
+      const products = cards
+        .filter(c => c.type === 'default' && c.products?.length > 0)
+        .flatMap(c => c.products);
+
+      console.log(`[ah-bonus] Page ${page}: ${products.length} products from ${cards.length} cards`);
       allProducts.push(...products);
 
-      // Stop early if last page
-      if (products.length < 50) break;
+      if (products.length < 30) break;
     }
 
     console.log('[ah-bonus] Total raw products:', allProducts.length);
 
-    // Map to clean format — keep ALL products, extract whatever discount info is available
     const deals = allProducts
       .map(p => {
-        const currentPrice = p.price?.now ?? p.price?.unitPrice ?? null;
+        const currentPrice = p.price?.now ?? null;
         const wasPrice = p.price?.was ?? null;
         const discountText = p.price?.discount?.percentage
           ? `${p.price.discount.percentage}% korting`
           : p.shield?.text || (wasPrice ? `was €${wasPrice}` : null);
 
         return {
-          name: p.title || p.description || 'Onbekend product',
-          brand: p.brand || 'AH',
+          name: p.title || p.description || null,
+          brand: p.brand?.name || p.brand || 'AH',
           price: currentPrice,
           was: wasPrice,
           discount: discountText,
-          unit: p.price?.unitSize || p.unitSize || null,
-          category: p.category?.toLowerCase() || null,
+          unit: p.price?.unitSize || null,
+          category: p.taxonomyId || null,
         };
       })
-      .filter(d => d.name && d.name !== 'Onbekend product' && d.price !== null)
+      .filter(d => d.name && d.price !== null)
       .slice(0, 100);
 
     console.log('[ah-bonus] Mapped deals:', deals.length);
 
-    // Cache it
     cache = deals;
     cacheTime = Date.now();
 
