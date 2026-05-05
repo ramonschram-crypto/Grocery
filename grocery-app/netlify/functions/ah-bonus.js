@@ -22,8 +22,6 @@ exports.handler = async function (event, context) {
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': 'Appie/8.22.3 Android/33',
-        'x-application': 'Appie',
-        'x-clientversion': '8.22.3',
       },
       body: JSON.stringify({ clientId: 'appie' }),
     });
@@ -41,8 +39,6 @@ exports.handler = async function (event, context) {
       Authorization: `Bearer ${access_token}`,
       'Content-Type': 'application/json',
       'User-Agent': 'Appie/8.22.3 Android/33',
-      'x-application': 'Appie',
-      'x-clientversion': '8.22.3',
     };
 
     // Step 2: fetch bonus products — 3 pages
